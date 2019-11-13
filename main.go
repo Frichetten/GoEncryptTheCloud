@@ -3,6 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+
+	"github.com/frichetten/GoEncryptTheCloud/cryptography"
+	"github.com/frichetten/GoEncryptTheCloud/fileoperations"
+	"github.com/frichetten/GoEncryptTheCloud/userinput"
 )
 
 // CLI flags
@@ -21,6 +25,51 @@ func main() {
 		return
 	}
 
+	// Act on the input
+	if *singleFileName != "" && *encryptFlag {
+		// Encrypt a single file
+		if !fileoperations.IsValidFile(*singleFileName) {
+			fmt.Println("Invalid file name")
+			fmt.Println("Terminating")
+			return
+		}
+		userPassword := userinput.GetEncryptionKey(*encryptFlag)
+		encryptionKey := cryptography.SHA256Hash(userPassword)
+
+		// Read the file into memory
+		data := fileoperations.ReadFile(*singleFileName)
+
+		// Encrypt
+		ciphertext, err := cryptography.Encrypt(data, encryptionKey)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		// Write to file
+		fileoperations.WriteFile(*singleFileName+".enc", ciphertext)
+
+	} else if *singleFileName != "" && *decryptFlag {
+		//Decrypt a single file
+		if !fileoperations.IsValidFile(*singleFileName) {
+			fmt.Println("Invalid file name")
+			fmt.Println("Terminating")
+			return
+		}
+		userPassword := userinput.GetEncryptionKey(*encryptFlag)
+		encryptionKey := cryptography.SHA256Hash(userPassword)
+
+		// Read the file into memory
+		data := fileoperations.ReadFile(*singleFileName)
+
+		//Decrypt
+		plaintext, err := cryptography.Decrypt(data, encryptionKey)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		// Write to file
+		fileoperations.WriteFile(*singleFileName+".dec", plaintext)
+	}
 }
 
 func validateCLIFlags() bool {
