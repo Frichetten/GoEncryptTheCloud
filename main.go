@@ -20,6 +20,7 @@ func main() {
 	if !validateCLIFlags() {
 		return
 	}
+
 }
 
 func validateCLIFlags() bool {
