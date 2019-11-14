@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/frichetten/GoEncryptTheCloud/cryptography"
 	"github.com/frichetten/GoEncryptTheCloud/fileoperations"
@@ -13,7 +14,8 @@ import (
 var (
 	encryptFlag    = flag.Bool("encrypt", false, "boolean flag to encrypt")
 	decryptFlag    = flag.Bool("decrypt", false, "boolean flag to decrypt")
-	singleFileName = flag.String("s", "", "encrypt/decrypt a single file. Expects a file name")
+	singleFileName = flag.String("s", "", "Encrypt/decrypt a single file. Expects a file name")
+	outputFileName = flag.String("o", "", "Decrypt a single file and give it this name")
 )
 
 func main() {
@@ -68,7 +70,13 @@ func main() {
 		}
 
 		// Write to file
-		fileoperations.WriteFile(*singleFileName+".dec", plaintext)
+		if *outputFileName != "" {
+			fileoperations.WriteFile(*outputFileName, plaintext)
+		} else {
+			*singleFileName = strings.TrimSuffix(*singleFileName, ".enc")
+			fileoperations.WriteFile(*singleFileName, plaintext)
+		}
+
 	}
 }
 
@@ -81,6 +89,11 @@ func validateCLIFlags() bool {
 	if (*singleFileName != "") && (!*encryptFlag && !*decryptFlag) {
 		fmt.Println("Need to encrypt or decrypt the file")
 		fmt.Println("Please add --encrypt or --decrypt")
+		fmt.Println("Terminating")
+		return false
+	}
+	if *decryptFlag && *outputFileName != "" && *singleFileName == "" {
+		fmt.Println("If you are changing the output name I need to know what file to decrypt")
 		fmt.Println("Terminating")
 		return false
 	}
