@@ -1,5 +1,6 @@
 # Test directory
 testfiles/
+testfiles.enc/
 
 # Binaries for programs and plugins
 *.exe
