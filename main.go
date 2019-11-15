@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/frichetten/GoEncryptTheCloud/cryptography"
@@ -84,36 +85,37 @@ func main() {
 		userPassword := userinput.GetEncryptionKey(*encryptFlag)
 		encryptionKey := cryptography.SHA256Hash(userPassword)
 
-		fileNames := fileoperations.EnumerateDirectory(*directoryName)
-		var directories = []string{}
-		for _, file := range fileNames {
-			fd, err := os.Stat(file)
+		err := filepath.Walk(*directoryName, func(path string, info os.FileInfo, err error) error {
+			fd, err := os.Stat(path)
 			if err != nil {
 				panic(err)
 			}
-			switch mode := fd.Mode(); {
-			case mode.IsDir():
-				directories = append(directories, file)
-			case mode.IsRegular():
+			if fd.IsDir() {
+				directory := strings.TrimSuffix(path, "/")
+				directory = strings.Replace(directory, "/", ".enc/", -1)
+				os.Mkdir(directory+".enc", os.ModePerm)
+				fmt.Println(directory + ".enc")
+			} else {
 				// Read the file into memory
-				data := fileoperations.ReadFile(file)
+				data := fileoperations.ReadFile(path)
 
-				// Encrypt
+				//Encrypt
 				ciphertext, err := cryptography.Encrypt(data, encryptionKey)
 				if err != nil {
 					fmt.Println(err)
 				}
 
 				// Write to file
-				fileoperations.WriteFile(file+".enc", ciphertext)
+				path = strings.Replace(path, "/", ".enc/", -1)
+				fileoperations.WriteFile(path+".enc", ciphertext)
+				fmt.Println(path + ".enc")
 			}
+			return nil
+		})
+		if err != nil {
+			panic(err)
 		}
 
-		// Now let's modify those directory names
-		for _, directory := range directories {
-			directory = strings.TrimSuffix(directory, "/")
-			os.Rename(directory, directory+".enc")
-		}
 	}
 }
 
