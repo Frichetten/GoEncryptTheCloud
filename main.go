@@ -116,6 +116,41 @@ func main() {
 			panic(err)
 		}
 
+	} else if *directoryName != "" && *decryptFlag {
+		// Decrypt a directory
+		userPassword := userinput.GetEncryptionKey(*encryptFlag)
+		encryptionKey := cryptography.SHA256Hash(userPassword)
+
+		err := filepath.Walk(*directoryName, func(path string, info os.FileInfo, err error) error {
+			fd, err := os.Stat(path)
+			if err != nil {
+				panic(err)
+			}
+			if fd.IsDir() {
+				directory := strings.TrimSuffix(path, "/")
+				directory = strings.Replace(directory, ".enc", "", -1)
+				os.Mkdir(directory, os.ModePerm)
+				fmt.Println(directory)
+			} else {
+				// Read the file into memory
+				data := fileoperations.ReadFile(path)
+
+				// Decrypt
+				plaintext, err := cryptography.Decrypt(data, encryptionKey)
+				if err != nil {
+					panic(err)
+				}
+
+				// Write to file
+				path = strings.Replace(path, ".enc", "", -1)
+				fileoperations.WriteFile(path, plaintext)
+				fmt.Println(path)
+			}
+			return nil
+		})
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
