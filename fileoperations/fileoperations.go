@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 // ReadFile returns the contents of a file as []byte
@@ -27,4 +28,19 @@ func IsValidFile(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+// EnumerateDirectory will return the path to every file in the provided directory
+func EnumerateDirectory(directoryName string) []string {
+	var fileNames []string
+
+	err := filepath.Walk(directoryName, func(path string, info os.FileInfo, err error) error {
+		fileNames = append(fileNames, path)
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	return fileNames
 }
