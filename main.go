@@ -9,6 +9,7 @@ import (
 
 	"github.com/frichetten/GoEncryptTheCloud/cryptography"
 	"github.com/frichetten/GoEncryptTheCloud/fileoperations"
+	"github.com/frichetten/GoEncryptTheCloud/s3operations"
 	"github.com/frichetten/GoEncryptTheCloud/userinput"
 )
 
@@ -16,6 +17,7 @@ import (
 var (
 	encryptFlag    = flag.Bool("encrypt", false, "boolean flag to encrypt")
 	decryptFlag    = flag.Bool("decrypt", false, "boolean flag to decrypt")
+	cloudFlag      = flag.Bool("cloud", false, "boolean flag to upload to AWS S3")
 	directoryName  = flag.String("dir", "", "Directory of files to encrypt")
 	singleFileName = flag.String("s", "", "Encrypt/decrypt a single file. Expects a file name")
 	outputFileName = flag.String("o", "", "Decrypt a single file and give it this name")
@@ -50,21 +52,26 @@ func main() {
 			fmt.Println(err)
 		}
 
-		// Write to file
-		fileoperations.WriteFile(*singleFileName+".enc", ciphertext)
+		// Write to S3 or file
+		if *cloudFlag {
+			s3operations.WriteS3(*singleFileName+".enc", ciphertext)
+		} else {
+			fileoperations.WriteFile(*singleFileName+".enc", ciphertext)
+		}
 
 	} else if *singleFileName != "" && *decryptFlag {
 		//Decrypt a single file
-		if !fileoperations.IsValidFile(*singleFileName) {
-			fmt.Println("Invalid file name")
-			fmt.Println("Terminating")
-			return
-		}
 		userPassword := userinput.GetEncryptionKey(*encryptFlag)
 		encryptionKey := cryptography.SHA256Hash(userPassword)
 
-		// Read the file into memory
-		data := fileoperations.ReadFile(*singleFileName)
+		data := []byte{}
+		if *cloudFlag {
+			// If we are getting files from the cloud we need to download them
+			data = s3operations.DownloadS3(*singleFileName, "jam")
+		} else {
+			// Read the file into memory
+			data = fileoperations.ReadFile(*singleFileName)
+		}
 
 		//Decrypt
 		plaintext, err := cryptography.Decrypt(data, encryptionKey)
