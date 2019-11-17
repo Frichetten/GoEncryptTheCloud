@@ -15,9 +15,13 @@ import (
 
 // CLI flags
 var (
-	encryptFlag    = flag.Bool("encrypt", false, "boolean flag to encrypt")
-	decryptFlag    = flag.Bool("decrypt", false, "boolean flag to decrypt")
-	cloudFlag      = flag.Bool("cloud", false, "boolean flag to upload to AWS S3")
+	encryptFlag     = flag.Bool("encrypt", false, "boolean flag to encrypt")
+	decryptFlag     = flag.Bool("decrypt", false, "boolean flag to decrypt")
+	cloudFlag       = flag.Bool("cloud", false, "boolean flag to upload to AWS S3")
+	alterConfigFlag = flag.Bool("change", false, "boolean flag to configure the config file")
+	configFile      = flag.String("config", "", "Normal location is "+
+		"~/.config/GoEncryptTheCloud/config, this sets a custom one")
+	bucketName     = flag.String("bucket", "", "AWS S3 bucket to read/write from. Ensure you have permission")
 	directoryName  = flag.String("dir", "", "Directory of files to encrypt")
 	singleFileName = flag.String("s", "", "Encrypt/decrypt a single file. Expects a file name")
 	outputFileName = flag.String("o", "", "Decrypt a single file and give it this name")
@@ -32,8 +36,14 @@ func main() {
 		return
 	}
 
+	// Load Config file
+	config := fileoperations.ReadConfigFile(*configFile)
+
 	// Act on the input
-	if *singleFileName != "" && *encryptFlag {
+	if *alterConfigFlag {
+		// Allow user to change their config
+		userinput.AlterConfigFile(*bucketName)
+	} else if *singleFileName != "" && *encryptFlag {
 		// Encrypt a single file
 		if !fileoperations.IsValidFile(*singleFileName) {
 			fmt.Println("Invalid file name")
@@ -54,7 +64,7 @@ func main() {
 
 		// Write to S3 or file
 		if *cloudFlag {
-			s3.WriteS3(*singleFileName+".enc", ciphertext)
+			s3.WriteS3(config.Bucketname, *singleFileName+".enc", ciphertext)
 		} else {
 			fileoperations.WriteFile(*singleFileName+".enc", ciphertext)
 		}
