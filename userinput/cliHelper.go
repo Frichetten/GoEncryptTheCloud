@@ -29,27 +29,30 @@ func GetEncryptionKey(isEncrypt bool) string {
 }
 
 // AlterConfigFile asks the user what they'd like to put in their config file
-func AlterConfigFile(manualConfigFileLocationString string) {
-	existingConfig := fileoperations.ReadConfigFile(manualConfigFileLocationString)
+func AlterConfigFile(manualConfigFileLocationString string, existingConfig fileoperations.Config) {
 	newConfig := fileoperations.Config{}
-	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("We will walk you through the config process")
 	fmt.Println("Leaving option blank will leave the current value")
-	fmt.Print("bucket name [ ", existingConfig.Bucketname, " ]: ")
-	bucketname, _ := reader.ReadString('\n')
-	bucketname = strings.TrimSuffix(bucketname, "\n")
-	if bucketname == "" {
-		newConfig.Bucketname = existingConfig.Bucketname
-	} else {
-		newConfig.Bucketname = bucketname
+
+	newConfig.Bucketname = getConfigOption(
+		"bucket name [ "+existingConfig.Bucketname+" ]: ",
+		existingConfig.Bucketname,
+	)
+	newConfig.Region = getConfigOption(
+		"region [ "+existingConfig.Region+" ]: ",
+		existingConfig.Region,
+	)
+
+	fileoperations.UpdateConfigFile(manualConfigFileLocationString, newConfig)
+}
+
+func getConfigOption(query string, existingValue string) string {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print(query)
+	value, _ := reader.ReadString('\n')
+	value = strings.TrimSuffix(value, "\n")
+	if value == "" {
+		return existingValue
 	}
-	fmt.Print("region [ ", existingConfig.Region, " ]: ")
-	region, _ := reader.ReadString('\n')
-	region = strings.TrimSuffix(region, "\n")
-	if region == "" {
-		newConfig.Region = existingConfig.Region
-	} else {
-		newConfig.Region = region
-	}
-	fileoperations.UpdateConfigFile(newConfig)
+	return value
 }
