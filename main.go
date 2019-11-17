@@ -9,7 +9,7 @@ import (
 
 	"github.com/frichetten/GoEncryptTheCloud/cryptography"
 	"github.com/frichetten/GoEncryptTheCloud/fileoperations"
-	"github.com/frichetten/GoEncryptTheCloud/s3operations"
+	"github.com/frichetten/GoEncryptTheCloud/s3"
 	"github.com/frichetten/GoEncryptTheCloud/userinput"
 )
 
@@ -54,7 +54,7 @@ func main() {
 
 		// Write to S3 or file
 		if *cloudFlag {
-			s3operations.WriteS3(*singleFileName+".enc", ciphertext)
+			s3.WriteS3(*singleFileName+".enc", ciphertext)
 		} else {
 			fileoperations.WriteFile(*singleFileName+".enc", ciphertext)
 		}
@@ -67,7 +67,7 @@ func main() {
 		data := []byte{}
 		if *cloudFlag {
 			// If we are getting files from the cloud we need to download them
-			data = s3operations.DownloadS3(*singleFileName, "jam")
+			data = s3.DownloadS3(*singleFileName, "jam")
 		} else {
 			// Read the file into memory
 			data = fileoperations.ReadFile(*singleFileName)
