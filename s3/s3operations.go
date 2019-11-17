@@ -12,7 +12,7 @@ import (
 )
 
 // WriteS3 will upload binary data to S3
-func WriteS3(filename string, ciphertext []byte) {
+func WriteS3(bucketname string, filename string, ciphertext []byte) {
 	sess := session.New(&aws.Config{
 		Region: aws.String("us-east-1"),
 	})

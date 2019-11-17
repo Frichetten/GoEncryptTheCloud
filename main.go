@@ -15,9 +15,15 @@ import (
 
 // CLI flags
 var (
-	encryptFlag    = flag.Bool("encrypt", false, "boolean flag to encrypt")
-	decryptFlag    = flag.Bool("decrypt", false, "boolean flag to decrypt")
-	cloudFlag      = flag.Bool("cloud", false, "boolean flag to upload to AWS S3")
+	encryptFlag     = flag.Bool("encrypt", false, "boolean flag to encrypt")
+	decryptFlag     = flag.Bool("decrypt", false, "boolean flag to decrypt")
+	cloudFlag       = flag.Bool("cloud", false, "boolean flag to upload to AWS S3")
+	alterConfigFlag = flag.Bool("change", false, "boolean flag to configure the config file")
+	localFlag       = flag.Bool("local", false, "This flag will work with local directories rather "+
+		"than s3")
+	configFile = flag.String("config", "", "Normal location is "+
+		"~/.config/GoEncryptTheCloud/config, this sets a custom one")
+	bucketName     = flag.String("bucket", "", "AWS S3 bucket to read/write from. Ensure you have permission")
 	directoryName  = flag.String("dir", "", "Directory of files to encrypt")
 	singleFileName = flag.String("s", "", "Encrypt/decrypt a single file. Expects a file name")
 	outputFileName = flag.String("o", "", "Decrypt a single file and give it this name")
@@ -32,33 +38,18 @@ func main() {
 		return
 	}
 
+	// Load Config file
+	config := fileoperations.Config{}
+	if fileoperations.ValidateConfigFileLocation(*configFile) {
+		config = fileoperations.ReadConfigFile(*configFile)
+	}
+
 	// Act on the input
-	if *singleFileName != "" && *encryptFlag {
-		// Encrypt a single file
-		if !fileoperations.IsValidFile(*singleFileName) {
-			fmt.Println("Invalid file name")
-			fmt.Println("Terminating")
-			return
-		}
-		userPassword := userinput.GetEncryptionKey(*encryptFlag)
-		encryptionKey := cryptography.SHA256Hash(userPassword)
-
-		// Read the file into memory
-		data := fileoperations.ReadFile(*singleFileName)
-
-		// Encrypt
-		ciphertext, err := cryptography.Encrypt(data, encryptionKey)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		// Write to S3 or file
-		if *cloudFlag {
-			s3.WriteS3(*singleFileName+".enc", ciphertext)
-		} else {
-			fileoperations.WriteFile(*singleFileName+".enc", ciphertext)
-		}
-
+	if *alterConfigFlag {
+		// Allow user to change their config
+		userinput.AlterConfigFile(*configFile, config)
+	} else if *singleFileName != "" && *encryptFlag {
+		encryptFile(*singleFileName, config)
 	} else if *singleFileName != "" && *decryptFlag {
 		//Decrypt a single file
 		userPassword := userinput.GetEncryptionKey(*encryptFlag)
@@ -158,6 +149,32 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+	}
+}
+
+func encryptFile(filename string, config fileoperations.Config) {
+	if !fileoperations.IsValidFile(filename) {
+		fmt.Println("Invalid file name")
+		fmt.Println("Terminating")
+		return
+	}
+	userPassword := userinput.GetEncryptionKey(*encryptFlag)
+	encryptionKey := cryptography.SHA256Hash(userPassword)
+
+	// Read the file into memory
+	data := fileoperations.ReadFile(filename)
+
+	// Encrypt
+	ciphertext, err := cryptography.Encrypt(data, encryptionKey)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Write to S3 or file
+	if *localFlag {
+		fileoperations.WriteFile(*singleFileName+".enc", ciphertext)
+	} else {
+		s3.WriteS3(config.Bucketname, *singleFileName+".enc", ciphertext)
 	}
 }
 
